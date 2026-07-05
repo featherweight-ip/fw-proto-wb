@@ -70,3 +70,38 @@ class wb_mem_target implements wb_proto_if #(32, 32);
         err = e;
     endtask
 endclass
+
+// TLM connector: an fw_export #(wb_proto_if) that an engine master port connects
+// to, whose access() redirects to a REGISTERED wb_proto_if client (the responder
+// the testbench registers). The TLM analogue of wb_target_xtor_bridge -- there the
+// converter polls a signal FIFO and calls the client; here the engine calls
+// access() directly (a method call, no bus) and we forward it to the SAME client.
+// So one responder (any wb_proto_if implementer, e.g. a sequence implementing
+// access) serves both the TLM and the signal (WB) paths, only the connector
+// differs. The client is set after construction (set_client), e.g. from the UVM
+// env's connect_phase once the responder exists.
+class wb_proto_client_export #(int unsigned ADDR_WIDTH = 32,
+                               int unsigned DATA_WIDTH = 32)
+        extends fw_export #(wb_proto_if #(ADDR_WIDTH, DATA_WIDTH))
+        implements wb_proto_if #(ADDR_WIDTH, DATA_WIDTH);
+    wb_proto_if #(ADDR_WIDTH, DATA_WIDTH) client;
+
+    function new(string name, fw_component parent);
+        super.new(name, parent, null);   // set_imp(this) AFTER super.new: passing
+        set_imp(this);                    // `this` INTO it segfaults Verilator
+    endfunction
+
+    function void set_client(wb_proto_if #(ADDR_WIDTH, DATA_WIDTH) c);
+        client = c;
+    endfunction
+
+    virtual task access(
+            input  [ADDR_WIDTH-1:0]      adr,
+            input  [DATA_WIDTH-1:0]      dat_w,
+            input  [(DATA_WIDTH/8)-1:0]  sel,
+            input                        we,
+            output [DATA_WIDTH-1:0]      dat_r,
+            output                       err);
+        client.access(adr, dat_w, sel, we, dat_r, err);
+    endtask
+endclass

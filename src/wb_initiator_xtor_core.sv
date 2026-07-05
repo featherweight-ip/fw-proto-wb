@@ -85,7 +85,12 @@ module wb_initiator_xtor_core #(
     assign stb   = (state == 1);
     assign cyc   = (state == 1);
 
-    assign req_ready = (state == 0);
+    // req_ready must be LOW during reset: state is held at 0 by reset, so without
+    // the !reset gate the HVL request() would see req_ready=1 and believe a request
+    // issued during reset was accepted -- but the reset branch never latches it, so
+    // the bus phase never launches and response() hangs. Gating by !reset makes a
+    // request issued during reset simply wait out reset (the documented behavior).
+    assign req_ready = (state == 0) && !reset;
     assign rsp_valid = (term && state == 1);
 
     always @(posedge clock or posedge reset) begin
