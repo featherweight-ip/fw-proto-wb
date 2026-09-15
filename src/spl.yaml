@@ -1,0 +1,29 @@
+# yaml-language-server: $schema=https://dv-flow.github.io/flow.dv.schema.json
+#
+# fw-hdl standard-platform layer. This fragment is loaded ONLY by the
+# `use-fw-hdl` config (see ../flow.yaml) -- an inactive config is completely
+# inert in dv-flow-mgr, so neither the fw-hdl import nor the `needs` below are
+# resolved when the kit is built without fw-hdl. Referencing fw.proto.wb.spl in
+# that case fails with a plain "failed to find task", which is the honest
+# semantic: without fw-hdl, this layer does not exist.
+fragment:
+  tasks:
+  # ----------------------------------------------------------------------
+  # fw_proto_wb_spl_pkg: the fw_mem_if <-> wb_proto_if adapters. Sits on top of
+  # `class` (it imports and re-exports fw_proto_wb_pkg), and needs fw-hdl's
+  # fw_hdl_pkg + fw_std_pkg plus the std incdir where fw_std_macros.svh lives.
+  #
+  # Consume this ALONE -- it pulls class -> xtor-sv -> xtor-core transitively, so
+  # it is `files` minus the checker, plus the adapters. Pairing it with `files`
+  # compiles fw_proto_wb_pkg.sv twice (verilator MODDUP), the same way `files`
+  # and `class` already overlap. Add `checker` separately if you want it.
+  # ----------------------------------------------------------------------
+  - export: spl
+    uses: std.FileSet
+    needs: [class, fw-hdl.hdl.sv-src]
+    with:
+      type: systemVerilogSource
+      include:
+      - fw_proto_wb_spl_pkg.sv
+      incdirs:
+      - .

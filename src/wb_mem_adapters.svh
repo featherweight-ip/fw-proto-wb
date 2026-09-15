@@ -1,8 +1,9 @@
 // Wishbone <-> fw_mem_if adapters -- bridge the protocol-independent memory API
 // (fw_mem_if, from fw-hdl's fw_std_pkg) to the Wishbone transactor bridges. Pure
-// class-layer logic: no new transactor, interface, or pins. These re-introduce a
-// dependency on fw-hdl (fw_component / fw_export / fw_mem_if), so the kit's core
-// transactor layer is no longer fully fw-hdl-free once this file is compiled in.
+// class-layer logic: no new transactor, interface, or pins. These depend on fw-hdl
+// (fw_component / fw_export / fw_mem_if), which is why they are compiled into
+// fw_proto_wb_spl_pkg rather than fw_proto_wb_pkg -- keeping the kit proper
+// fw-hdl-free. This file is included by fw_proto_wb_spl_pkg ONLY.
 //
 // One fw_mem_if read/write becomes one Wishbone `access()` on wb_proto_if; the new
 // transactor API terminates a transfer with a single `err` bit (ACK implicit,

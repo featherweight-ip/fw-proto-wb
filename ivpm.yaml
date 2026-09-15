@@ -4,10 +4,19 @@ package:
   name: fw-proto-wb
 
   dep-sets:
-  - name: default-dev
-    deps: 
+  # The fw-hdl standard-platform layer, as a dep-set a consumer can opt into.
+  # Pairs with the `use-fw-hdl` dv-flow config in flow.yaml: this makes the
+  # package present, the config makes it visible to the build. A consumer that
+  # wants fw_proto_wb_spl_pkg needs BOTH; one without the other is a no-op or a
+  # load error respectively.
+  - name: use-fw-hdl
+    deps:
     - name: fw-hdl
       url: https://github.com/featherweight-hdl/fw-hdl.git
+
+  - name: default-dev
+    uses: use-fw-hdl
+    deps:
     - name: fw-proto-core
       url: https://github.com/featherweight-ip/fw-proto-core.git
     - name: dv-flow-mgr

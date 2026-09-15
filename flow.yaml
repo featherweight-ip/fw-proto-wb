@@ -2,11 +2,10 @@
 package:
   name: fw.proto.wb
 
-  # The fw modeling library this kit builds on, imported relative to
-  # $IVPM_PACKAGES (the same way apps import THIS kit). Makes the kit fully
-  # portable -- no sibling-path assumption. src.files depends on fw-hdl.src.sv-src.
-  imports:
-  - ${{ env.IVPM_PACKAGES }}/fw-hdl
+  # The kit proper has NO imports: fw_proto_wb_pkg, the transactors, the checker
+  # and the back-to-back tests all build against nothing but themselves. This is
+  # what lets the package be fetched (and built, and tested) without fw-hdl
+  # present at all -- see the `use-fw-hdl` IVPM dep-set.
 
   # The kit sources live in src/; a runnable back-to-back demonstrator (the
   # REQUIRED §8a sim test) lives in tests/; a back-to-back formal proof of the
@@ -15,3 +14,15 @@ package:
   - src/flow.yaml
   - tests/flow.yaml
   - tests/formal/flow.yaml
+
+  configs:
+  # fw-hdl standard-platform layer. Selected with `dfm ... -c use-fw-hdl`, which
+  # requires the package to have been fetched with the matching IVPM dep-set so
+  # that $IVPM_PACKAGES/fw-hdl exists. Both halves are here on purpose: the
+  # import (availability) and the fragment that wires it in. With the config
+  # inactive neither is looked at, so a no-fw-hdl checkout loads clean.
+  - name: use-fw-hdl
+    imports:
+    - ${{ env.IVPM_PACKAGES }}/fw-hdl
+    fragments:
+    - src/spl.yaml

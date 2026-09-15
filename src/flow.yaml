@@ -6,15 +6,13 @@ fragment:
   tasks:
   # The protocol kit itself: the class-layer package + the transactor SV
   # interfaces/modules (which cannot live in a package). incdir '.' picks up the
-  # .svh includes (API classes, bridges, adapters).
+  # .svh includes (API classes, bridges).
   #
-  # NOTE: the bridge classes are fw-hdl-free, but fw_proto_wb_pkg now also carries
-  # the fw_mem_if <-> wb_proto_if adapters (wb_mem_adapters.svh), which use
-  # fw_component/fw_export and fw_mem_if from fw-hdl's fw_std_pkg. So this FileSet
-  # `needs` fw-hdl.hdl.sv-src (carrying fw_hdl_pkg + fw_std_pkg + the std incdir
-  # where fw_std_macros.svh lives).
+  # fw-hdl-FREE, and deliberately so: everything in the kit that touches fw-hdl
+  # is confined to fw_proto_wb_spl_pkg, exported as `spl` by the `use-fw-hdl`
+  # config (src/spl.yaml). Nothing here may `needs: fw-hdl.*` -- that import is
+  # not even resolvable unless the kit was fetched with the fw-hdl dep-set.
   - export: files
-    needs: [fw-hdl.hdl.sv-src]
     uses: std.FileSet
     with:
       type: systemVerilogSource
@@ -40,11 +38,11 @@ fragment:
   # wb_target_xtor_bridge poll the FIFOs / call access()) pull this on top of
   # the transactor SV interfaces. needs xtor-sv: the bridges reference the
   # transactor interfaces by name, so those must be compiled in the same image
-  # first.
+  # first. fw-hdl-free -- see `files` above; the adapters are in `spl`.
   # ----------------------------------------------------------------------
   - export: class
     uses: std.FileSet
-    needs: [xtor-sv, fw-hdl.hdl.sv-src]
+    needs: [xtor-sv]
     with:
       type: systemVerilogSource
       include:
