@@ -1,7 +1,21 @@
 name: Docs
 
-# Build the Sphinx documentation on every push/PR, and publish it to GitHub
-# Pages on pushes to the default branch.
+# Build the Sphinx documentation on every push/PR.
+#
+# THE PAGES DEPLOY WAS DELETED 2026-08-30 (github-coexistence-completion-plan.md
+# Phase 5, wave 1, runbook step 4). dvkit.org owns all documentation and these
+# docs now publish to dvkit.org/featherweight-ip/fw-proto-wb/ from
+# .forgejo/workflows/docs.yml.
+#
+# The build stayed. It is a genuine CI check -- `sphinx-build -W` turns warnings
+# into errors, so it catches a broken cross-reference on the commit that
+# introduced it -- and losing that was never the point. Only the PUBLICATION
+# left.
+#
+# Deleting rather than tag-gating is deliberate, and it is the runbook's own
+# instruction: a tag-gated Pages deploy is still a second publisher of the same
+# content on a different schedule, and two publishers of one document set is the
+# problem regardless of how rarely the second one fires.
 on:
   push:
     branches: [main]
@@ -9,15 +23,12 @@ on:
     branches: [main]
   workflow_dispatch:
 
-# Allow the GITHUB_TOKEN to deploy to Pages.
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
-# Allow one concurrent deployment; cancel in-progress runs on the same ref.
+# Cancel superseded runs on the same ref.
 concurrency:
-  group: pages-${{ github.ref }}
+  group: docs-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -40,21 +51,11 @@ jobs:
       - name: Build HTML
         run: sphinx-build -b html -W --keep-going docs docs/_build/html
 
-      - name: Upload Pages artifact
-        if: github.event_name != 'pull_request'
-        uses: actions/upload-pages-artifact@v5
-        with:
-          path: docs/_build/html
-
-  deploy:
-    # Only publish from the default branch (not from PRs or forks).
-    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v5
+      - name: Sanity-check the build
+        # Sphinx exits 0 on a build that produced almost nothing, and this is
+        # now the only place the GitHub side looks at the result -- there is no
+        # deploy step downstream to notice an empty tree.
+        run: |
+          test -s docs/_build/html/index.html \
+            || { echo "::error::no index.html in the build output"; exit 1; }
+          echo "generated pages: $(find docs/_build/html -name '*.html' | wc -l)"
