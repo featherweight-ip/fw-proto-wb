@@ -9,13 +9,14 @@ package:
   # package present, the config makes it visible to the build. A consumer that
   # wants fw_proto_wb_spl_pkg needs BOTH; one without the other is a no-op or a
   # load error respectively.
-  - name: use-fw-hdl
+  - name: use
     deps:
     - name: fw-hdl
       url: https://github.com/featherweight-hdl/fw-hdl.git
+      dep-set: default-dev
 
   - name: default-dev
-    uses: use-fw-hdl
+    uses: use
     deps:
     - name: fw-proto-core
       url: https://github.com/featherweight-ip/fw-proto-core.git
@@ -33,6 +34,7 @@ package:
       src: gh-rls
       url: https://github.com/edapack/yosys-bin
       cache: true
+      dep-set: default
     # Documentation build (Sphinx) — used by the docs CI workflow. 'sphinx'
     # itself is pulled in transitively via dv-flow-mgr; these are the extras the
     # fw-proto-wb docs need.
