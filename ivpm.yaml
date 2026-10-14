@@ -2,6 +2,7 @@
 # yaml-language-server: $schema=https://fvutils.github.io/ivpm/ivpm.schema.json
 package:
   name: fw-proto-wb
+  default-dep-set: dev
 
   dep-sets:
   # The fw-hdl standard-platform layer, as a dep-set a consumer can opt into.
@@ -49,7 +50,18 @@ package:
     # formal proof (fw.proto.wb.fv) needs it pulled into the env explicitly.
     - name: click
       src: pypi
-#      src: ivpm.yaml
-#      url: https://github.com/edapack
-#      dep-sets:
-#      - verilator
+
+  # What a developer of THIS repo fetches (the default): the tools above,
+  # plus the Wishbone VIP that the kit's own tests are written with. flow.dv
+  # imports org.fwvip.wb; the VIP imports fw.proto.wb, which resolves to this
+  # checkout -- see the comment in flow.dv.
+  #
+  # Kept out of default-dev on purpose. fwvip-wb fetches this package with
+  # `dep-set: default-dev`, so adding the VIP there would make the VIP fetch
+  # itself. `deps: skip` stops either side walking back into the other: the
+  # VIP's own developer environment is not needed to build the VIP.
+  - name: dev
+    uses: default-dev
+    deps:
+    - { name: fwvip-wb, url: https://github.com/featherweight-vip/fwvip-wb.git, deps: skip }
+    - { name: fwvip-core, url: https://github.com/featherweight-vip/fwvip-core.git, deps: skip }

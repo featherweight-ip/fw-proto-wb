@@ -1,0 +1,41 @@
+# yaml-language-server: $schema=https://dv-flow.github.io/flow.dv.schema.json
+#****************************************************************************
+#* flow.dv -- the developer project for this repo: fw.proto.wb.dev.
+#*
+#* dfm prefers flow.dv over flow.yaml when it searches for the root package,
+#* so `dfm run` here loads this file. ivpm's package map always names
+#* flow.yaml, so a consumer never loads this one.
+#*
+#* This is a separate package that imports fw.proto.wb by name, exactly as a
+#* consumer would, so the tests exercise the kit as it is delivered. It also
+#* imports the Wishbone VIP (org.fwvip.wb), which is built ON this kit: the
+#* VIP's own flow.yaml imports fw.proto.wb, and resolves to this checkout.
+#* That is the dev-only reverse edge -- the kit is tested with the VIP built
+#* from the kit under test. It must be a separate package: an import cycle
+#* back into the ROOT package fails, because the root's own tasks are not
+#* loaded yet when its imports are.
+#*
+#* Run a test:  dfm run wb-proto            (fw.proto.wb.dev.wb-proto)
+#****************************************************************************
+package:
+  name: fw.proto.wb.dev
+
+  # dev-package-map.yaml resolves this repo's own package; ivpm's generated
+  # map resolves everything fetched into packages/ (the `dev` dep-set).
+  package-map:
+  - dev-package-map.yaml
+  - packages/dv-flow-package-map.yaml
+
+  imports:
+  - fw.proto.wb
+  - org.fwvip.wb
+
+  fragments:
+  - tests/flow.yaml
+  - tests/formal/flow.yaml
+
+  configs:
+  # Same name as the kit's config, so `-c use-fw-hdl` reaches both: an
+  # explicit config is applied to the root and to every imported package
+  # that defines it. The kit's adds the spl layer; nothing here needs more.
+  - name: use-fw-hdl

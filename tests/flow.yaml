@@ -16,7 +16,7 @@ fragment:
 
   - name: wb-proto-img
     uses: hdlsim.vlt.SimImage
-    needs: [files, wb-proto-tb]
+    needs: [fw.proto.wb.files, wb-proto-tb]
     with:
       top: [wb_proto_tb]
       # exercise the protocol checker's concurrent-SVA layer in sim too

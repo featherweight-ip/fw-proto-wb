@@ -1,0 +1,7 @@
+# Maps this repo's own package to its consumer flow file, so flow.dv can
+# import fw.proto.wb by name like every other package. ivpm generates the
+# map for packages/ and never includes the root, which is why this exists.
+package-map:
+  version: 1
+  packages:
+  - {name: fw.proto.wb, path: flow.yaml}

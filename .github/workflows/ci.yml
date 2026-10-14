@@ -50,22 +50,22 @@ jobs:
 
       # Back-to-back kit sim (§8a).
       - name: Run simulation tests
-        run: direnv exec . dfm run fw.proto.wb.wb-proto
+        run: direnv exec . dfm run wb-proto
 
       # Back-to-back SymbiYosys BMC proof of the cores.
       - name: Run formal test
-        run: direnv exec . dfm run fw.proto.wb.fv
+        run: direnv exec . dfm run fv
 
       # Cover (non-vacuity): proves every cover() in the checker + harness is
       # reachable, so the BMC pass above isn't vacuously true.
       - name: Run formal non-vacuity check
-        run: direnv exec . dfm run fw.proto.wb.fv-cover
+        run: direnv exec . dfm run fv-cover
 
       # On a sby failure the proof's logs live in the task rundir (not the dfm
       # console output); surface them so failures are diagnosable from CI.
       - name: Dump formal logs on failure
         if: failure()
         run: |
-          find rundir/fw.proto.wb.fv rundir/fw.proto.wb.fv-cover \
+          find rundir/fw.proto.wb.dev.fv rundir/fw.proto.wb.dev.fv-cover \
             -name '*.txt' -o -name '*.log' -o -name 'logfile*' 2>/dev/null \
             | while read -r f; do echo "::group::$f"; cat "$f"; echo "::endgroup::"; done
