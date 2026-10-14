@@ -16,8 +16,10 @@ package:
       url: https://github.com/featherweight-hdl/fw-hdl.git
       dep-set: default-dev
 
+  # Not `uses: use`: the kit builds without fw-hdl, and fw-hdl's own deps
+  # are not all published on GitHub, so pulling it in here breaks every
+  # fetch of this package (including fwvip-wb's) on a public runner.
   - name: default-dev
-    uses: use
     deps:
     - name: fw-proto-core
       url: https://github.com/featherweight-ip/fw-proto-core.git
