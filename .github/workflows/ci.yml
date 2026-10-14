@@ -35,10 +35,13 @@ jobs:
       - name: Install direnv
         run: sudo apt-get update && sudo apt-get install -y direnv
 
+      # uv as well as ivpm: without uv, ivpm installs python content with pip,
+      # whose editable install writes egg-info into the package -- and a
+      # cached package (yosys) is a read-only directory, so it fails.
       - name: Install IVPM
-        run: python -m pip install ivpm
+        run: python -m pip install ivpm uv
 
-      # Clones the source deps (fw-hdl, dv-flow-mgr, libhdlsim, libformal) and
+      # Clones the source deps (dv-flow-mgr, libhdlsim, libformal, fwvip-wb) and
       # fetches the prebuilt verilator/yosys release packages declared in
       # ivpm.yaml, then writes packages/packages.envrc.
       - name: Load dependencies (ivpm update -a)
