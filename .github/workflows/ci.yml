@@ -1,74 +1,86 @@
+# featherweight-ip/fw-proto-wb -- GitHub Actions.
+#
+# COPY THIS AS A PAIR. Its counterpart is .forgejo/workflows/ci.yml. If
+# .forgejo/workflows/ is absent the Forgejo runner falls back to running THIS
+# FILE. The two differ only where the forges do: the Forgejo side adds the
+# internal-identifier check and uses forgejo/upload-artifact. This side also
+# passes GITHUB_TOKEN to ci/run.sh (on Forgejo that token is not a GitHub one)
+# and uses actions/cache v5 (the Forgejo mirror is tested on v4). If you are
+# changing anything else, they are drifting.
+#
+# What runs is ci/run.sh -- the same script on both forges, and on a laptop.
+# This file only sets up the cache, calls it, and keeps the logs.
+#
+# NOTHING HERE PUBLISHES. That is why there is no release-authority `gate` job
+# (see dvkit/forgejo-ops templates/). If a publish job is ever added, add the
+# gate with it, on both sides.
+
 name: CI
 
-# Build the kit's dependencies with IVPM and run the simulation + formal tests
-# on every push/PR to the default branch.
 on:
   push:
-    branches: [main]
+    branches: ['**']
   pull_request:
-    branches: [main]
   workflow_dispatch:
 
 permissions:
   contents: read
 
-# Cancel superseded runs on the same ref.
-concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: true
-
 jobs:
-  test:
-    runs-on: ubuntu-latest
+  checks:
+    name: Tests (sim, formal)
+    # 24.04, not ubuntu-latest: on the Forgejo runner ubuntu-latest is a 22.04
+    # image with Python 3.10, which nothing in this stack is tested on. Named
+    # the same on both sides so the two runs are the same environment.
+    runs-on: ubuntu-24.04
     steps:
-      - name: Checkout
-        uses: actions/checkout@v7
+      - uses: actions/checkout@v5
 
-      - name: Set up Python
-        uses: actions/setup-python@v6
+      # The ivpm cache holds the prebuilt tools (Verilator, Yosys, from
+      # edapack). Restore and save are separate steps so the save key can name
+      # what the cache HOLDS after ci/run.sh, not what ivpm.yaml says -- see
+      # ci/ivpm-cache-key.sh. The prefix restores the newest saved cache;
+      # ivpm fetches only what it lacks, and ci/run.sh prunes what no run uses.
+      - name: Restore the ivpm package cache
+        id: ivpm-restore
+        uses: actions/cache/restore@v5
         with:
-          python-version: "3.12"
+          path: ~/.cache/ivpm
+          key: ivpm-${{ runner.os }}-
+          restore-keys: |
+            ivpm-${{ runner.os }}-
 
-      # direnv loads the environment from .envrc, which sources the
-      # packages/packages.envrc that 'ivpm update' generates (sets IVPM_PACKAGES
-      # and puts python/verilator/yosys/sv2v/sby on PATH).
-      - name: Install direnv
-        run: sudo apt-get update && sudo apt-get install -y direnv
+      - name: Tests
+        # ci/run.sh points IVPM_CACHE at ~/.cache/ivpm, the path cached above.
+        env:
+          # Lets ivpm resolve edapack's `latest` releases through the GitHub
+          # API when its unauthenticated path cannot: anonymous API calls get
+          # 60 an hour, shared by every job on the runner's address.
+          GITHUB_TOKEN: ${{ github.token }}
+        run: ci/run.sh
 
-      # uv as well as ivpm: without uv, ivpm installs python content with pip,
-      # whose editable install writes egg-info into the package -- and a
-      # cached package (yosys) is a read-only directory, so it fails.
-      - name: Install IVPM
-        run: python -m pip install ivpm uv
-
-      # Clones the source deps (dv-flow-mgr, libhdlsim, libformal, fwvip-wb) and
-      # fetches the prebuilt verilator/yosys release packages declared in
-      # ivpm.yaml, then writes packages/packages.envrc.
-      - name: Load dependencies (ivpm update -a)
-        run: ivpm update -a
-
-      # Whitelist the .envrc so 'direnv exec' can load it below.
-      - name: Allow direnv
-        run: direnv allow .
-
-      # Back-to-back kit sim (§8a).
-      - name: Run simulation tests
-        run: direnv exec . dfm run wb-proto
-
-      # Back-to-back SymbiYosys BMC proof of the cores.
-      - name: Run formal test
-        run: direnv exec . dfm run fv
-
-      # Cover (non-vacuity): proves every cover() in the checker + harness is
-      # reachable, so the BMC pass above isn't vacuously true.
-      - name: Run formal non-vacuity check
-        run: direnv exec . dfm run fv-cover
-
-      # On a sby failure the proof's logs live in the task rundir (not the dfm
-      # console output); surface them so failures are diagnosable from CI.
-      - name: Dump formal logs on failure
-        if: failure()
+      - name: Compute the ivpm cache key
+        id: ivpm-key
+        if: always()
         run: |
-          find rundir/fw.proto.wb.dev.fv rundir/fw.proto.wb.dev.fv-cover \
-            -name '*.txt' -o -name '*.log' -o -name 'logfile*' 2>/dev/null \
-            | while read -r f; do echo "::group::$f"; cat "$f"; echo "::endgroup::"; done
+          k=$(ci/ivpm-cache-key.sh)
+          echo "key=${k:+ivpm-${{ runner.os }}-$k}" >> "$GITHUB_OUTPUT"
+
+      - name: Save the ivpm package cache
+        # Only when the contents changed (and there are some): an unchanged
+        # cache is already saved under this key.
+        if: >-
+          always() && steps.ivpm-key.outputs.key != '' &&
+          steps.ivpm-key.outputs.key != steps.ivpm-restore.outputs.cache-matched-key
+        uses: actions/cache/save@v5
+        with:
+          path: ~/.cache/ivpm
+          key: ${{ steps.ivpm-key.outputs.key }}
+
+      - name: Upload the logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-reports
+          path: ci-reports/
+          if-no-files-found: warn

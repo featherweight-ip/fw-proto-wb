@@ -9,7 +9,7 @@
 //   - the slave model implements wb_proto_if; the observer implements wb_monitor_if;
 //   - the target/monitor bridges hold those handles and run() loops forked by start().
 //
-// Run:  dfm run wb.proto.wb-proto      (expect: [wb_proto] PASS)
+// Run:  dfm run wb-proto      (expect: [wb_proto] PASS; any failure exits nonzero)
 // ======================================================================
 `include "fw_proto_wb_macros.svh"
 
@@ -188,8 +188,10 @@ module wb_proto_tb;
         end else
             $display("[monitor] observed %0d phases OK", obs.n_seen);
 
-        if (errors == 0) $display("[wb_proto] PASS");
-        else             $display("[wb_proto] FAIL (%0d errors)", errors);
+        // $fatal, not $display + $finish: the exit status is the verdict
+        // (`dfm run wb-proto` and CI read nothing else), and $finish exits 0.
+        if (errors != 0) $fatal(1, "[wb_proto] FAIL (%0d errors)", errors);
+        $display("[wb_proto] PASS");
         $finish;
     end
 

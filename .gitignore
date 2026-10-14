@@ -225,3 +225,7 @@ packages/
 .codex/
 .cursor/
 
+
+# CI (ci/run.sh)
+.ci-venv/
+ci-reports/
