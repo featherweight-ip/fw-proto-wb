@@ -262,6 +262,10 @@ endmodule
 - **Registered slave:** the kit's slave always inserts ≥1 wait state (it's clocked
   — a true zero-wait async slave is out of scope).
 - **Start the target loop:** the target/monitor bridges are active — `fork
-  tbr.run(); join_none` (and `mbr.run()`), or nothing services the bus.
+  tbr.run(); join_none` (and `mbr.run()`), or nothing services the bus. That `fork …
+  join_none` is bench code (a module `initial`), not design code: `join_none` is not
+  allowed inside a process. A bridge holds a virtual interface, so it is timed code
+  with no mark needed; its `run()` is the timed sampling loop (fw-hdl
+  `docs/methodology/timing.md`).
 - **Set `$IVPM_PACKAGES`** before `dfm run`; the kit's import of fw-hdl resolves
   through it at load time.

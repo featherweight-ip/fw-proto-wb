@@ -7,6 +7,8 @@
 //     access() for each captured request to obtain the response to drive back.
 //   adr/dat_w/sel/we : the request (write data on we=1)
 //   dat_r/err        : the response (read data + ERR; ACK implicit on !err)
+// Latency-insensitive: a transfer completes on ack, after any number of cycles.
+(* fw_latency_insensitive *)
 interface class wb_proto_if #(
         parameter int ADDR_WIDTH = 32,
         parameter int DATA_WIDTH = 32);
